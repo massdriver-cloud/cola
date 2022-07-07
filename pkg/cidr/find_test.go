@@ -19,6 +19,18 @@ func TestFindAvailableCidrs(t *testing.T) {
 	}
 	tests := []testData{
 		{
+			name:     "Comment example",
+			baseCidr: "10.0.0.0/16",
+			usedCidrs: []string{
+				"10.0.0.0/18",
+				"10.0.64.0/20",
+				"10.0.80.0/24",
+			},
+			desiredMask: net.CIDRMask(21, 32),
+			want:        "10.0.88.0/21",
+			wantError:   nil,
+		},
+		{
 			name:        "Basic",
 			baseCidr:    "10.0.0.0/16",
 			usedCidrs:   []string{},

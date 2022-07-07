@@ -57,26 +57,26 @@ func FindAvailableCIDR(rootCidr *net.IPNet, desiredMask *net.IPMask, usedCidrs [
 //                     Single lines (/ or \) are never visited in this example
 //
 //                                   10.0.0.0/16
-//                                   //       \
-//                                child1     child2
-//                                 //           \
-//                            10.0.0.0/17    10.0.128.0/17
-//                            //       \\
-//                         child1     child2
-//                          //           \\
-//                     10.0.0.0/18    10.0.64.0/18
-//                      (conflict)    //       \
-//                                  child1     child2
-//                                  //           \
-//                             10.0.64.0/19    10.0.96.0/19
-//                              //       \\
-//                           child1     child2
-//                            //           \\
-//                      10.0.64.0/20    10.0.80.0/20
-//                       (conflict)      //       \\
-//                                    child1     child2
-//                                     //           \\
-//                               10.0.80.0/21    10.0.88.0/21
+//                                  //         \
+//                          (1)  child1       child2
+//                                //             \
+//                            10.0.0.0/17     10.0.128.0/17
+//                           //        \\
+//                   (2)  child1      child2   (3)
+//                         //            \\
+//                    10.0.0.0/18    10.0.64.0/18
+//                     (conflict)    //        \
+//                          (4)   child1      child2
+//                                 //            \
+//                           10.0.64.0/19      10.0.96.0/19
+//                            //        \\
+//                    (5)  child1      child2  (6)
+//                          //            \\
+//                    10.0.64.0/20      10.0.80.0/20
+//                     (conflict)       //        \\
+//                                   child1      child2
+//                                    //            \\
+//                        (7)    10.0.80.0/21    10.0.88.0/21  (8)
 //                     (contains another subnet)   FOUND MATCH!
 //
 //                                 RESULT: 10.0.88.0/21
