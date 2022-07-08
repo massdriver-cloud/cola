@@ -2,7 +2,7 @@ package cidr
 
 import "net"
 
-func EqualCidrs(x *net.IPNet, y *net.IPNet) bool {
+func EqualCIDRs(x *net.IPNet, y *net.IPNet) bool {
 	return x.IP.Equal(y.IP) && EqualMask(&x.Mask, &y.Mask)
 }
 

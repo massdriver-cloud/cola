@@ -7,7 +7,7 @@ import (
 	"github.com/massdriver-cloud/cola/pkg/cidr"
 )
 
-func TestEqualCidrs(t *testing.T) {
+func TestEqualCIDRs(t *testing.T) {
 	type testData struct {
 		name string
 		one  net.IPNet
@@ -43,7 +43,7 @@ func TestEqualCidrs(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := cidr.EqualCidrs(&tc.one, &tc.two)
+			got := cidr.EqualCIDRs(&tc.one, &tc.two)
 
 			if got != tc.want {
 				t.Fatalf("want: %v, got: %v, cidr1: %v, cidr2: %v ", tc.want, got, tc.one.String(), tc.two.String())

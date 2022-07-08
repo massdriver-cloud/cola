@@ -1,41 +1,33 @@
 package cidr
 
 import (
-	"errors"
+	"fmt"
 	"net"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 )
 
-func FindAvailableCIDR(rootCidr *net.IPNet, desiredMask *net.IPMask, usedCidrs []*net.IPNet) (*net.IPNet, error) {
+func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
 	// ensure inputs are valid
-	err := cidr.VerifyNoOverlap(usedCidrs, rootCidr)
+	err := cidr.VerifyNoOverlap(usedCIDRs, rootCIDR)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrInvalidInputRanges, err.Error())
 	}
 
-	// If the rootCidr mask and desired mask are equal, the only possible cidr is the entire range
-	if EqualMask(&rootCidr.Mask, desiredMask) {
-		if len(usedCidrs) == 0 {
-			return rootCidr, nil
-		} else {
-			return nil, errors.New("unable to find available cidr")
+	// If the rootCIDR mask and desired mask are equal, the only possible cidr is the entire range
+	if EqualMask(&rootCIDR.Mask, desiredMask) {
+		if len(usedCIDRs) == 0 {
+			return rootCIDR, nil
 		}
+		return nil, fmt.Errorf("%w: desired mask would consume the entire root CIDR range", ErrNoAvailableCIDR)
 	}
 
 	// If the root cidr has a smaller mask than the desired cidr, then this is impossible
-	if SmallerMask(&rootCidr.Mask, desiredMask) {
-		return nil, errors.New("desired mask is larger than available cidr")
+	if SmallerMask(&rootCIDR.Mask, desiredMask) {
+		return nil, fmt.Errorf("%w: desired mask is larger than the root CIDR range", ErrNoAvailableCIDR)
 	}
 
-	result, err := evaluateChildren(rootCidr, desiredMask, usedCidrs)
-	if err != nil {
-		return nil, err
-	}
-	if result == nil {
-		return nil, errors.New("unable to find available cidr")
-	}
-	return result, nil
+	return evaluateChildren(rootCIDR, desiredMask, usedCIDRs)
 }
 
 //                                Core Algorithm
@@ -80,60 +72,54 @@ func FindAvailableCIDR(rootCidr *net.IPNet, desiredMask *net.IPMask, usedCidrs [
 //                     (contains another subnet)   FOUND MATCH!
 //
 //                                 RESULT: 10.0.88.0/21
-func evaluateChildren(currentCidr *net.IPNet, desiredMask *net.IPMask, usedCidrs []*net.IPNet) (*net.IPNet, error) {
-	child1, child2, err := ChildCidrs(currentCidr)
+func evaluateChildren(currentCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
+	child1, child2, err := ChildCIDRs(currentCIDR)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, child := range []*net.IPNet{child1, child2} {
-		if !MatchesExistingCidr(child, usedCidrs) {
+		if !MatchesExistingCIDR(child, usedCIDRs) {
 			if EqualMask(desiredMask, &child.Mask) {
-				if !ContainsExistingCidr(child, usedCidrs) {
+				if !ContainsExistingCIDR(child, usedCIDRs) {
 					return child, nil
 				}
 			} else {
-				result, err := evaluateChildren(child, desiredMask, usedCidrs)
-				if err != nil {
-					return nil, err
-				}
-				if result != nil {
-					return result, nil
-				}
+				return evaluateChildren(child, desiredMask, usedCIDRs)
 			}
 		}
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("%w: searched all available ranges could not find space for requested mask", ErrNoAvailableCIDR)
 }
 
-func MatchesExistingCidr(currentCidr *net.IPNet, usedCidrs []*net.IPNet) bool {
-	for _, usedCidr := range usedCidrs {
-		if EqualCidrs(currentCidr, usedCidr) {
+func MatchesExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
+	for _, usedCIDR := range usedCIDRs {
+		if EqualCIDRs(currentCIDR, usedCIDR) {
 			return true
 		}
 	}
 	return false
 }
 
-func ContainsExistingCidr(currentCidr *net.IPNet, usedCidrs []*net.IPNet) bool {
-	for _, usedCidr := range usedCidrs {
-		if ContainsCidr(currentCidr, usedCidr) {
+func ContainsExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
+	for _, usedCIDR := range usedCIDRs {
+		if ContainsCIDR(currentCIDR, usedCIDR) {
 			return true
 		}
 	}
 	return false
 }
 
-func ContainsCidr(parentCidr *net.IPNet, childCidr *net.IPNet) bool {
-	firstIP, lastIP := cidr.AddressRange(childCidr)
-	if parentCidr.Contains(firstIP) && parentCidr.Contains(lastIP) {
+func ContainsCIDR(parentCIDR *net.IPNet, childCIDR *net.IPNet) bool {
+	firstIP, lastIP := cidr.AddressRange(childCIDR)
+	if parentCIDR.Contains(firstIP) && parentCIDR.Contains(lastIP) {
 		return true
 	}
 	return false
 }
 
-func ChildCidrs(parent *net.IPNet) (*net.IPNet, *net.IPNet, error) {
+func ChildCIDRs(parent *net.IPNet) (*net.IPNet, *net.IPNet, error) {
 	child1, err := cidr.Subnet(parent, 1, 0)
 	if err != nil {
 		return nil, nil, err
