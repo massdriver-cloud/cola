@@ -8,11 +8,11 @@ import (
 	"github.com/massdriver-cloud/cola/pkg/cidr"
 )
 
-func TestFindAvailableCidrs(t *testing.T) {
+func TestFindAvailableCIDRs(t *testing.T) {
 	type testData struct {
 		name        string
-		baseCidr    string
-		usedCidrs   []string
+		baseCIDR    string
+		usedCIDRs   []string
 		desiredMask net.IPMask
 		want        string
 		wantError   error
@@ -20,8 +20,8 @@ func TestFindAvailableCidrs(t *testing.T) {
 	tests := []testData{
 		{
 			name:     "Comment example",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/18",
 				"10.0.64.0/20",
 				"10.0.80.0/24",
@@ -32,16 +32,16 @@ func TestFindAvailableCidrs(t *testing.T) {
 		},
 		{
 			name:        "Basic",
-			baseCidr:    "10.0.0.0/16",
-			usedCidrs:   []string{},
+			baseCIDR:    "10.0.0.0/16",
+			usedCIDRs:   []string{},
 			desiredMask: net.CIDRMask(24, 32),
 			want:        "10.0.0.0/24",
 			wantError:   nil,
 		},
 		{
 			name:     "Simple Collision",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 			},
 			desiredMask: net.CIDRMask(24, 32),
@@ -50,8 +50,8 @@ func TestFindAvailableCidrs(t *testing.T) {
 		},
 		{
 			name:     "Collision Used Larger",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/23",
 			},
 			desiredMask: net.CIDRMask(24, 32),
@@ -60,8 +60,8 @@ func TestFindAvailableCidrs(t *testing.T) {
 		},
 		{
 			name:     "Collision Used Smaller",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 			},
 			desiredMask: net.CIDRMask(23, 32),
@@ -70,37 +70,37 @@ func TestFindAvailableCidrs(t *testing.T) {
 		},
 		{
 			name:     "Error invalid subnets",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 				"10.1.0.0/24",
 			},
 			desiredMask: net.CIDRMask(23, 32),
 			want:        "",
-			wantError:   errors.New("10.0.0.0/16 does not fully contain 10.1.0.0/24"),
+			wantError:   cidr.ErrInvalidInputRanges,
 		},
 		{
 			name:        "Successful entire subnet",
-			baseCidr:    "10.0.0.0/16",
-			usedCidrs:   []string{},
+			baseCIDR:    "10.0.0.0/16",
+			usedCIDRs:   []string{},
 			desiredMask: net.CIDRMask(16, 32),
 			want:        "10.0.0.0/16",
 			wantError:   nil,
 		},
 		{
 			name:     "Error entire subnet",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 			},
 			desiredMask: net.CIDRMask(16, 32),
 			want:        "",
-			wantError:   errors.New("unable to find available cidr"),
+			wantError:   cidr.ErrNoAvailableCIDR,
 		},
 		{
 			name:     "Error full",
-			baseCidr: "10.0.0.0/16",
-			usedCidrs: []string{
+			baseCIDR: "10.0.0.0/16",
+			usedCIDRs: []string{
 				"10.0.0.0/18",
 				"10.0.64.0/18",
 				"10.0.128.0/18",
@@ -108,39 +108,37 @@ func TestFindAvailableCidrs(t *testing.T) {
 			},
 			desiredMask: net.CIDRMask(24, 32),
 			want:        "",
-			wantError:   errors.New("unable to find available cidr"),
+			wantError:   cidr.ErrNoAvailableCIDR,
 		},
 		{
 			name:        "Error Mask too large",
-			baseCidr:    "10.0.0.0/16",
-			usedCidrs:   []string{},
+			baseCIDR:    "10.0.0.0/16",
+			usedCIDRs:   []string{},
 			desiredMask: net.CIDRMask(15, 32),
 			want:        "",
-			wantError:   errors.New("desired mask is larger than available cidr"),
+			wantError:   cidr.ErrNoAvailableCIDR,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, baseCidr, _ := net.ParseCIDR(tc.baseCidr)
-			usedCidrs := make([]*net.IPNet, len(tc.usedCidrs))
-			for i, usedCidr := range tc.usedCidrs {
-				_, usedCidr, _ := net.ParseCIDR(usedCidr)
-				usedCidrs[i] = usedCidr
+			_, baseCIDR, _ := net.ParseCIDR(tc.baseCIDR)
+			usedCIDRs := make([]*net.IPNet, len(tc.usedCIDRs))
+			for i, usedCIDR := range tc.usedCIDRs {
+				_, usedCIDR, _ := net.ParseCIDR(usedCIDR)
+				usedCIDRs[i] = usedCIDR
 			}
-			got, err := cidr.FindAvailableCIDR(baseCidr, &tc.desiredMask, usedCidrs)
+			got, err := cidr.FindAvailableCIDR(baseCIDR, &tc.desiredMask, usedCIDRs)
 			if tc.wantError != nil {
 				if err == nil {
 					t.Fatalf("Expected error: %s, got nil", tc.wantError.Error())
 				}
-				if err.Error() != tc.wantError.Error() {
+				if !errors.Is(err, tc.wantError) {
 					t.Fatalf("Invalid error, want: %s, got %s,", tc.wantError.Error(), err.Error())
 				}
 			} else {
 				if err != nil {
-					if err.Error() != tc.wantError.Error() {
-						t.Fatalf("Unexpected error: %s,", err.Error())
-					}
+					t.Fatalf("Unexpected error: %s,", err.Error())
 				}
 				if got.String() != tc.want {
 					t.Fatalf("want: %v, got: %v", tc.want, got.String())
@@ -150,32 +148,32 @@ func TestFindAvailableCidrs(t *testing.T) {
 	}
 }
 
-func TestMatchesExistingCidr(t *testing.T) {
+func TestMatchesExistingCIDR(t *testing.T) {
 	type testData struct {
 		name        string
-		currentCidr string
-		usedCidrs   []string
+		currentCIDR string
+		usedCIDRs   []string
 		want        bool
 	}
 	tests := []testData{
 		{
 			name:        "Basic True",
-			currentCidr: "10.0.0.0/24",
-			usedCidrs: []string{
+			currentCIDR: "10.0.0.0/24",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 			},
 			want: true,
 		},
 		{
 			name:        "Basic False",
-			currentCidr: "10.0.0.0/24",
-			usedCidrs:   []string{},
+			currentCIDR: "10.0.0.0/24",
+			usedCIDRs:   []string{},
 			want:        false,
 		},
 		{
 			name:        "Multiple True",
-			currentCidr: "10.0.1.0/24",
-			usedCidrs: []string{
+			currentCIDR: "10.0.1.0/24",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 				"10.0.1.0/24",
 				"10.0.2.0/24",
@@ -184,8 +182,8 @@ func TestMatchesExistingCidr(t *testing.T) {
 		},
 		{
 			name:        "Multiple False",
-			currentCidr: "10.0.4.0/24",
-			usedCidrs: []string{
+			currentCIDR: "10.0.4.0/24",
+			usedCIDRs: []string{
 
 				"10.0.0.0/24",
 				"10.0.1.0/24",
@@ -197,13 +195,13 @@ func TestMatchesExistingCidr(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, currentCidr, _ := net.ParseCIDR(tc.currentCidr)
-			usedCidrs := make([]*net.IPNet, len(tc.usedCidrs))
-			for i, usedCidr := range tc.usedCidrs {
-				_, usedCidr, _ := net.ParseCIDR(usedCidr)
-				usedCidrs[i] = usedCidr
+			_, currentCIDR, _ := net.ParseCIDR(tc.currentCIDR)
+			usedCIDRs := make([]*net.IPNet, len(tc.usedCIDRs))
+			for i, usedCIDR := range tc.usedCIDRs {
+				_, usedCIDR, _ := net.ParseCIDR(usedCIDR)
+				usedCIDRs[i] = usedCIDR
 			}
-			got := cidr.MatchesExistingCidr(currentCidr, usedCidrs)
+			got := cidr.MatchesExistingCIDR(currentCIDR, usedCIDRs)
 
 			if got != tc.want {
 				t.Fatalf("want: %v, got: %v", tc.want, got)
@@ -212,32 +210,32 @@ func TestMatchesExistingCidr(t *testing.T) {
 	}
 }
 
-func TestContainsExistingCidr(t *testing.T) {
+func TestContainsExistingCIDR(t *testing.T) {
 	type testData struct {
 		name        string
-		currentCidr string
-		usedCidrs   []string
+		currentCIDR string
+		usedCIDRs   []string
 		want        bool
 	}
 	tests := []testData{
 		{
 			name:        "Basic True",
-			currentCidr: "10.0.0.0/20",
-			usedCidrs: []string{
+			currentCIDR: "10.0.0.0/20",
+			usedCIDRs: []string{
 				"10.0.0.0/24",
 			},
 			want: true,
 		},
 		{
 			name:        "Basic False",
-			currentCidr: "10.0.0.0/20",
-			usedCidrs:   []string{},
+			currentCIDR: "10.0.0.0/20",
+			usedCIDRs:   []string{},
 			want:        false,
 		},
 		{
 			name:        "Multiple True",
-			currentCidr: "10.0.0.0/20",
-			usedCidrs: []string{
+			currentCIDR: "10.0.0.0/20",
+			usedCIDRs: []string{
 				"10.0.15.0/24",
 				"10.0.16.0/24",
 				"10.0.17.0/24",
@@ -246,8 +244,8 @@ func TestContainsExistingCidr(t *testing.T) {
 		},
 		{
 			name:        "Multiple False",
-			currentCidr: "10.0.0.0/20",
-			usedCidrs: []string{
+			currentCIDR: "10.0.0.0/20",
+			usedCIDRs: []string{
 				"10.0.16.0/24",
 				"10.0.17.0/24",
 				"10.0.18.0/24",
@@ -258,13 +256,13 @@ func TestContainsExistingCidr(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, currentCidr, _ := net.ParseCIDR(tc.currentCidr)
-			usedCidrs := make([]*net.IPNet, len(tc.usedCidrs))
-			for i, usedCidr := range tc.usedCidrs {
-				_, usedCidr, _ := net.ParseCIDR(usedCidr)
-				usedCidrs[i] = usedCidr
+			_, currentCIDR, _ := net.ParseCIDR(tc.currentCIDR)
+			usedCIDRs := make([]*net.IPNet, len(tc.usedCIDRs))
+			for i, usedCIDR := range tc.usedCIDRs {
+				_, usedCIDR, _ := net.ParseCIDR(usedCIDR)
+				usedCIDRs[i] = usedCIDR
 			}
-			got := cidr.ContainsExistingCidr(currentCidr, usedCidrs)
+			got := cidr.ContainsExistingCIDR(currentCIDR, usedCIDRs)
 
 			if got != tc.want {
 				t.Fatalf("want: %v, got: %v", tc.want, got)
@@ -273,52 +271,52 @@ func TestContainsExistingCidr(t *testing.T) {
 	}
 }
 
-func TestContainsCidr(t *testing.T) {
+func TestContainsCIDR(t *testing.T) {
 	type testData struct {
 		name        string
-		currentCidr string
-		testCidr    string
+		currentCIDR string
+		testCIDR    string
 		want        bool
 	}
 	tests := []testData{
 		{
 			name:        "Fully contains True",
-			currentCidr: "10.0.16.0/20",
-			testCidr:    "10.0.17.0/24",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.17.0/24",
 			want:        true,
 		},
 		{
 			name:        "Basic False",
-			currentCidr: "10.0.16.0/20",
-			testCidr:    "10.0.15.0/24",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.15.0/24",
 			want:        false,
 		},
 		{
 			name:        "Lower True",
-			currentCidr: "10.0.16.0/20",
-			testCidr:    "10.0.16.0/24",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.16.0/24",
 			want:        true,
 		},
 		{
 			name:        "Upper true",
-			currentCidr: "10.0.16.0/20",
-			testCidr:    "10.0.31.0/24",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.31.0/24",
 			want:        true,
 		},
 		{
 			name:        "Inverse False",
-			currentCidr: "10.0.16.0/20",
-			testCidr:    "10.0.0.0/18",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.0.0/18",
 			want:        false,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, currentCidr, _ := net.ParseCIDR(tc.currentCidr)
-			_, testCidr, _ := net.ParseCIDR(tc.testCidr)
+			_, currentCIDR, _ := net.ParseCIDR(tc.currentCIDR)
+			_, testCIDR, _ := net.ParseCIDR(tc.testCIDR)
 
-			got := cidr.ContainsCidr(currentCidr, testCidr)
+			got := cidr.ContainsCIDR(currentCIDR, testCIDR)
 
 			if got != tc.want {
 				t.Fatalf("want: %v, got: %v", tc.want, got)
@@ -332,7 +330,7 @@ func TestChildCIDRs(t *testing.T) {
 	_, want1, _ := net.ParseCIDR("10.0.0.0/17")
 	_, want2, _ := net.ParseCIDR("10.0.128.0/17")
 
-	got1, got2, err := cidr.ChildCidrs(parent)
+	got1, got2, err := cidr.ChildCIDRs(parent)
 	if err != nil {
 		t.Fatalf("%d, unexpected error", err)
 	}

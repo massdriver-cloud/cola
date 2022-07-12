@@ -15,13 +15,13 @@ RUN DEBIAN_FRONTEND=noninteractive \
 # Add an unprivileged user
 ENV USER=appuser
 ENV UID=10001
-RUN adduser \    
-    --disabled-password \    
-    --gecos "" \    
-    --home "/nonexistent" \    
-    --no-create-home \ 
-    --shell "/sbin/nologin" \        
-    --uid "${UID}" \    
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --no-create-home \
+    --shell "/sbin/nologin" \
+    --uid "${UID}" \
     "${USER}"
 
 
