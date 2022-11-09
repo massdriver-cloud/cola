@@ -1,6 +1,6 @@
 # cola - CIDR Optimization by Lookup and Assignment
 
-`COLA` is also the acronym for ["Collision On Launch Assessment"](https://satellitesafety.gsfc.nasa.gov/cara.html#:~:text=COLA%20stands%20for%20Collision%20on,range%20and%20not%20by%20CARA.), an assessment performed before a spacecraft launch to ensure there won't be a collision with another orbiting vehicle.
+`COLA` is also the acronym for ["Collision On Launch Assessment"](https://nap.nationalacademies.org/read/13244/chapter/11#chapter09_r22), an assessment performed before a spacecraft launch to ensure there won't be a collision with another orbiting vehicle.
 
 `cola` is a service for finding an available CIDR block given a parent CIDR block, a mask (desired block size), and list of already used CIDR blocks.
 
