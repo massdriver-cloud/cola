@@ -27,6 +27,11 @@ func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs [
 		return nil, fmt.Errorf("%w: desired mask is larger than the root CIDR range", ErrNoAvailableCIDR)
 	}
 
+	// If the root cidr is a "used cidr" then this is impossible
+	if MatchesExistingCIDR(rootCIDR, usedCIDRs) {
+		return nil, fmt.Errorf("%w: searched all available ranges could not find space for requested mask", ErrNoAvailableCIDR)
+	}
+
 	return evaluateChildren(rootCIDR, desiredMask, usedCIDRs)
 }
 

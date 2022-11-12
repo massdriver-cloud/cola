@@ -118,6 +118,14 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			want:        "",
 			wantError:   cidr.ErrNoAvailableCIDR,
 		},
+		{
+			name:        "baseCIDR is usedCIDR",
+			baseCIDR:    "10.0.0.0/16",
+			usedCIDRs:   []string{"10.0.0.0/16"},
+			desiredMask: net.CIDRMask(24, 32),
+			want:        "",
+			wantError:   cidr.ErrNoAvailableCIDR,
+		},
 	}
 
 	for _, tc := range tests {
@@ -280,9 +288,15 @@ func TestContainsCIDR(t *testing.T) {
 	}
 	tests := []testData{
 		{
-			name:        "Fully contains True",
+			name:        "Basic True",
 			currentCIDR: "10.0.16.0/20",
 			testCIDR:    "10.0.17.0/24",
+			want:        true,
+		},
+		{
+			name:        "Fully contains True",
+			currentCIDR: "10.0.16.0/20",
+			testCIDR:    "10.0.16.0/24",
 			want:        true,
 		},
 		{
