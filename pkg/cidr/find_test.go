@@ -39,6 +39,27 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			wantError:   nil,
 		},
 		{
+			name:     "traverse both sides",
+			baseCIDR: "10.0.0.0/20",
+			usedCIDRs: []string{
+				"10.0.0.0/23",
+				"10.0.2.0/23",
+				"10.0.4.0/23",
+				"10.0.6.0/23",
+				"10.0.8.0/24",
+				"10.0.9.0/24",
+				"10.0.10.0/24",
+				"10.0.11.0/24",
+				"10.0.12.0/25",
+				"10.0.12.128/25",
+				"10.0.13.0/25",
+				"10.0.13.128/25",
+			},
+			desiredMask: net.CIDRMask(28, 32),
+			want:        "10.0.14.0/28",
+			wantError:   nil,
+		},
+		{
 			name:     "Simple Collision",
 			baseCIDR: "10.0.0.0/16",
 			usedCIDRs: []string{
@@ -95,7 +116,7 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			},
 			desiredMask: net.CIDRMask(16, 32),
 			want:        "",
-			wantError:   cidr.ErrNoAvailableCIDR,
+			wantError:   cidr.ErrNoAvailableCidr,
 		},
 		{
 			name:     "Error full",
@@ -108,7 +129,7 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			},
 			desiredMask: net.CIDRMask(24, 32),
 			want:        "",
-			wantError:   cidr.ErrNoAvailableCIDR,
+			wantError:   cidr.ErrNoAvailableCidr,
 		},
 		{
 			name:        "Error Mask too large",
@@ -116,7 +137,7 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			usedCIDRs:   []string{},
 			desiredMask: net.CIDRMask(15, 32),
 			want:        "",
-			wantError:   cidr.ErrNoAvailableCIDR,
+			wantError:   cidr.ErrNoAvailableCidr,
 		},
 		{
 			name:        "baseCIDR is usedCIDR",
@@ -124,7 +145,7 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			usedCIDRs:   []string{"10.0.0.0/16"},
 			desiredMask: net.CIDRMask(24, 32),
 			want:        "",
-			wantError:   cidr.ErrNoAvailableCIDR,
+			wantError:   cidr.ErrCidrAlreadyInUse,
 		},
 	}
 

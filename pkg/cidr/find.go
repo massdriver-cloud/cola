@@ -19,28 +19,23 @@ func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs [
 		if len(usedCIDRs) == 0 {
 			return rootCIDR, nil
 		}
-		return nil, fmt.Errorf("%w: desired mask would consume the entire root CIDR range", ErrNoAvailableCIDR)
+		return nil, fmt.Errorf("%w: desired mask would consume the entire root CIDR range", ErrNoAvailableCidr)
 	}
 
 	// If the root cidr has a smaller mask than the desired cidr, then this is impossible
 	if SmallerMask(&rootCIDR.Mask, desiredMask) {
-		return nil, fmt.Errorf("%w: desired mask is larger than the root CIDR range", ErrNoAvailableCIDR)
+		return nil, fmt.Errorf("%w: desired mask is larger than the root CIDR range", ErrNoAvailableCidr)
 	}
 
-	// If the root cidr is a "used cidr" then this is impossible
-	if MatchesExistingCIDR(rootCIDR, usedCIDRs) {
-		return nil, fmt.Errorf("%w: searched all available ranges could not find space for requested mask", ErrNoAvailableCIDR)
-	}
-
-	return evaluateChildren(rootCIDR, desiredMask, usedCIDRs)
+	return evaluateCidr(rootCIDR, desiredMask, usedCIDRs)
 }
 
 //                                Core Algorithm
-// We're going to walk down the CIDR, each iteration splitting into the 2 children. For each child we check:
+// We're going to walk down the CIDR, each iteration checking the current CIDR to see:
 //   1. If we match an existing CIDR, skip it
 //   2. If our mask fits the desired mask size then just make sure...
 //   3. We don't contain an already existing CIDR (a /18 block might look good, til you check to see there are existing /20 blocks within it)
-// If all of this passes, then we have found our CIDR. Otherwise, recursively keep searching.
+// If all of this passes, then we have found our CIDR. Otherwise, continue walking tree by check each child (always 2)
 //
 //                                    Example
 // Root CIDR: 10.0.0.0/16
@@ -77,25 +72,36 @@ func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs [
 //                     (contains another subnet)   FOUND MATCH!
 //
 //                                 RESULT: 10.0.88.0/21
-func evaluateChildren(currentCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
-	child1, child2, err := ChildCIDRs(currentCIDR)
-	if err != nil {
-		return nil, err
+func evaluateCidr(current *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
+	if MatchesExistingCIDR(current, usedCIDRs) {
+		return nil, fmt.Errorf("%w: CIDR range collides with an existing CIDR", ErrCidrAlreadyInUse)
 	}
 
-	for _, child := range []*net.IPNet{child1, child2} {
-		if !MatchesExistingCIDR(child, usedCIDRs) {
-			if EqualMask(desiredMask, &child.Mask) {
-				if !ContainsExistingCIDR(child, usedCIDRs) {
-					return child, nil
-				}
-			} else {
-				return evaluateChildren(child, desiredMask, usedCIDRs)
+	if EqualMask(desiredMask, &current.Mask) {
+		if ContainsExistingCIDR(current, usedCIDRs) {
+			return nil, fmt.Errorf("%w: CIDR range contains an existing CIDR", ErrCidrAlreadyInUse)
+		} else {
+			// We found it!
+			return current, nil
+		}
+	} else {
+		child1, child2, err := ChildCIDRs(current)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, child := range []*net.IPNet{child1, child2} {
+			result, err := evaluateCidr(child, desiredMask, usedCIDRs)
+			// if the result is set with no errors it means we found a CIDR, and should return it
+			// all the way up the stack. Otherwise we no-op, which will either check the other child,
+			// or return the catch-all error that no CIDRs exist in this current branch of the tree
+			if result != nil && err == nil {
+				return result, nil
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("%w: searched all available ranges could not find space for requested mask", ErrNoAvailableCIDR)
+	return nil, fmt.Errorf("%w: searched all available ranges could not find space for requested mask", ErrNoAvailableCidr)
 }
 
 func MatchesExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
