@@ -90,15 +90,15 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			wantError:   nil,
 		},
 		{
-			name:     "Error invalid subnets",
+			name:     "Used subnet outside root",
 			baseCIDR: "10.0.0.0/16",
 			usedCIDRs: []string{
 				"10.0.0.0/24",
 				"10.1.0.0/24",
 			},
 			desiredMask: net.CIDRMask(23, 32),
-			want:        "",
-			wantError:   cidr.ErrInvalidInputRanges,
+			want:        "10.0.2.0/23",
+			wantError:   nil,
 		},
 		{
 			name:        "Successful entire subnet",
@@ -145,7 +145,15 @@ func TestFindAvailableCIDRs(t *testing.T) {
 			usedCIDRs:   []string{"10.0.0.0/16"},
 			desiredMask: net.CIDRMask(24, 32),
 			want:        "",
-			wantError:   cidr.ErrCidrAlreadyInUse,
+			wantError:   cidr.ErrNoAvailableCidr,
+		},
+		{
+			name:        "baseCIDR within usedCIDR",
+			baseCIDR:    "10.1.0.0/16",
+			usedCIDRs:   []string{"10.0.0.0/14"},
+			desiredMask: net.CIDRMask(24, 32),
+			want:        "",
+			wantError:   cidr.ErrInvalidInputRanges,
 		},
 	}
 

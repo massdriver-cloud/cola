@@ -7,19 +7,18 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 )
 
+// FindAvailableCIDR will find a CIDR range of specified desiredMask size within the
+// rootCIDR given a list of already existing usedCIDRs.
 func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
-	// ensure inputs are valid
-	err := cidr.VerifyNoOverlap(usedCIDRs, rootCIDR)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidInputRanges, err.Error())
-	}
-
-	// If the rootCIDR mask and desired mask are equal, the only possible cidr is the entire range
-	if EqualMask(&rootCIDR.Mask, desiredMask) {
-		if len(usedCIDRs) == 0 {
-			return rootCIDR, nil
+	// if somehow the rootCIDR is within a used CIDR, then this is impossible
+	for _, used := range usedCIDRs {
+		if ContainsCIDR(used, rootCIDR) {
+			// If the masks are equal this just means the the used CIDR is identical to the root CIDR, but still means theres no more space
+			if EqualMask(&rootCIDR.Mask, &used.Mask) {
+				return nil, fmt.Errorf("%w: a used CIDR matches the root CIDR", ErrNoAvailableCidr)
+			}
+			return nil, fmt.Errorf("%w: root CIDR is within a used CIDR", ErrInvalidInputRanges)
 		}
-		return nil, fmt.Errorf("%w: desired mask would consume the entire root CIDR range", ErrNoAvailableCidr)
 	}
 
 	// If the root cidr has a smaller mask than the desired cidr, then this is impossible
@@ -74,12 +73,12 @@ func FindAvailableCIDR(rootCIDR *net.IPNet, desiredMask *net.IPMask, usedCIDRs [
 //                                 RESULT: 10.0.88.0/21
 func evaluateCidr(current *net.IPNet, desiredMask *net.IPMask, usedCIDRs []*net.IPNet) (*net.IPNet, error) {
 	if MatchesExistingCIDR(current, usedCIDRs) {
-		return nil, fmt.Errorf("%w: CIDR range collides with an existing CIDR", ErrCidrAlreadyInUse)
+		return nil, fmt.Errorf("%w: CIDR range collides with an existing CIDR", ErrNoAvailableCidr)
 	}
 
 	if EqualMask(desiredMask, &current.Mask) {
 		if ContainsExistingCIDR(current, usedCIDRs) {
-			return nil, fmt.Errorf("%w: CIDR range contains an existing CIDR", ErrCidrAlreadyInUse)
+			return nil, fmt.Errorf("%w: CIDR range contains an existing CIDR", ErrNoAvailableCidr)
 		} else {
 			// We found it!
 			return current, nil
@@ -113,6 +112,8 @@ func MatchesExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
 	return false
 }
 
+// ContainsExistingCIDR returns true if any of the usedCIDRs are contained within the currentCIDR,
+// and false otherwise.
 func ContainsExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
 	for _, usedCIDR := range usedCIDRs {
 		if ContainsCIDR(currentCIDR, usedCIDR) {
@@ -122,6 +123,8 @@ func ContainsExistingCIDR(currentCIDR *net.IPNet, usedCIDRs []*net.IPNet) bool {
 	return false
 }
 
+// ContainsCIDR returns true if the childCIDR is contained within parentCIDR, and false otherwise.
+// Comparison checking is inclusive, so identical CIDRs will return true.
 func ContainsCIDR(parentCIDR *net.IPNet, childCIDR *net.IPNet) bool {
 	firstIP, lastIP := cidr.AddressRange(childCIDR)
 	if parentCIDR.Contains(firstIP) && parentCIDR.Contains(lastIP) {
@@ -130,6 +133,7 @@ func ContainsCIDR(parentCIDR *net.IPNet, childCIDR *net.IPNet) bool {
 	return false
 }
 
+// ChildCIDRs will return the two child CIDRs from extending the mask 1 bit
 func ChildCIDRs(parent *net.IPNet) (*net.IPNet, *net.IPNet, error) {
 	child1, err := cidr.Subnet(parent, 1, 0)
 	if err != nil {
